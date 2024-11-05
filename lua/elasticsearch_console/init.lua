@@ -52,17 +52,12 @@ end
 ---@param selector string
 ---@return TSNode?
 local function closest_parent(node, selector)
-  print(node)
-  print(selector)
   if node == nil then
-    return nil
+    return
   end
 
   local status, parent_node = pcall(node.parent, node)
-  if not status then
-    return
-  end
-  if parent_node == nil then
+  if not status or parent_node == nil then
     return
   end
 
@@ -70,10 +65,9 @@ local function closest_parent(node, selector)
     if parent_node:type() == selector then
       return parent_node
     end
-    print("four")
 
     status, parent_node = pcall(node.parent, node)
-    if not status then
+    if not status or parent_node == nil then
       return
     end
   end
