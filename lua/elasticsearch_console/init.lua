@@ -15,9 +15,27 @@
 -- specific language governing permissions and limitations
 -- under the License.
 
+local request = require("elasticsearch_console.request")
+
 local M = {}
 
-M.setup = function()
+---@alias apiAuth { api_key: string }
+---@alias userPassAuth { username: string, password: string }
+---@alias auth apiAuth | userPassAuth
+---@alias config { url: string, auth: auth }
+
+---@type config
+local config = {
+  url = "http://localhost:9200",
+  auth = {
+    username = "elastic",
+    password = "changeme",
+  },
+}
+
+---sets up plugin
+---@param setup_config? config
+M.setup = function(setup_config)
   -- add Elasticsearch console filetype
   vim.filetype.add({
     extension = {
@@ -38,105 +56,30 @@ M.setup = function()
       })
     end,
   })
-end
 
--- Returns the first parent of `node` with type `selector`
----@param node TSNode
----@param selector string
----@return TSNode?
-local function closest_parent(node, selector)
-  if node == nil then
-    return
-  end
-
-  local status, parent_node = pcall(node.parent, node)
-  if not status or parent_node == nil then
-    return
-  end
-
-  while parent_node ~= nil do
-    if parent_node:type() == selector then
-      return parent_node
+  -- set Elasticsearch config
+  if setup_config ~= nil then
+    if setup_config.url ~= nil then
+      local url = setup_config.url
+      if string.sub(url, string.len(url), string.len(url)) == "/" then
+        url = string.sub(url, 0, string.len(url) - 1)
+      end
+      config.url = url
     end
 
-    status, parent_node = pcall(node.parent, node)
-    if not status or parent_node == nil then
-      return
+    if setup_config.auth ~= nil then
+      config.auth = setup_config.auth
     end
   end
 end
 
----@param node TSNode
----@return string?
-local function node_text(node)
-  return vim.treesitter.get_node_text(node, vim.api.nvim_get_current_buf())
-end
-
----builds a curl command string for a given method, path and body
----@param method string?
----@param path string?
----@param body string?
----@return string[]?
-local function build_curl_request(method, path, body)
-  if method == nil or path == nil then
-    return
-  end
-
-  local request = { "curl", "-u", "elastic:changeme", "-X" }
-
-  if string.sub(path, 1, 1) ~= "/" then
-    path = "/" .. path
-  end
-
-  table.insert(request, method)
-  table.insert(request, "http://localhost:9200" .. path)
-
-  if body ~= nil then
-    table.insert(request, "-d'" .. body .. "'")
-  end
-  return request
-end
-
----for the current cursor position, parse request syntax and return a curl command
----@return string[]?
-local function request()
-  -- get current location in file
-  local status, node = pcall(vim.treesitter.get_node)
-  if not status or node == nil then
-    return
-  end
-
-  -- expand from current location to full request
-  local parent_request = closest_parent(node, "request")
-  if parent_request == nil then
-    return
-  end
-
-  -- parse request parts
-  local method, path, body
-  for child in parent_request:iter_children() do
-    if child:type() == "request_type" then
-      method = node_text(child)
-    end
-    if child:type() == "request_path" then
-      path = node_text(child)
-    end
-    if child:type() == "request_body" then
-      body = node_text(child)
-    end
-  end
-
-  return build_curl_request(method, path, body)
-end
-
+---parses the request the cursor is currently on, runs it, and prints the response
 M.run_request = function()
-  local status, request_cmd = pcall(request)
+  local status, request_cmd = pcall(request.request_from_position, config)
   if not status or request_cmd == nil then
     print("No request found at this cursor location")
     return
   end
-
-  -- table.insert(request_cmd, "-s")
 
   -- execute command and print JSON result
   local on_exit = function(obj)
@@ -158,11 +101,23 @@ end
 
 ---prints a curl command for the request the cursor is currently on
 M.get_curl = function()
-  local status, request_cmd = pcall(request)
+  local status, request_cmd = pcall(request.request_from_position, config)
   if not status or request_cmd == nil then
     print("No request found at this cursor location")
   else
     print(table.concat(request_cmd, " "))
+  end
+end
+
+---updates local Elasticsearch configuration values
+---@param changes { url?: string, auth?: auth }
+M.config = function(changes)
+  if changes.url ~= nil then
+    config.url = changes.url
+  end
+
+  if changes.auth ~= nil then
+    config.auth = changes.auth
   end
 end
 
