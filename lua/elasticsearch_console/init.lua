@@ -32,19 +32,12 @@ M.setup = function()
       vim.lsp.start({
         name = "elasticsearch_console",
         cmd = {
-          "/home/joshmock/.asdf/shims/node",
-          "/home/joshmock/Code/elastic-neovim/lsp-dev-console/out/server.js",
+          "elasticsearch-language-server",
           "--stdio",
         },
       })
     end,
   })
-
-  -- assign tree-sitter parser to filetype
-  -- vim.treesitter.language.add("elasticsearch_console", {
-  --   path = "/home/joshmock/Code/elastic-neovim/tree-sitter-elasticsearch-console/elasticsearch-console.so",
-  -- })
-  -- vim.treesitter.language.register("elasticsearch_console", "elasticsearch_console")
 end
 
 -- Returns the first parent of `node` with type `selector`
