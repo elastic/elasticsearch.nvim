@@ -1,0 +1,2 @@
+elasticsearch.nvim
+Copyright 2025 Elasticsearch B.V.

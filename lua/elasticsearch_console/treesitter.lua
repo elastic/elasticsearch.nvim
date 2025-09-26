@@ -1,19 +1,5 @@
--- Licensed to Elasticsearch B.V. under one or more contributor
--- license agreements. See the NOTICE file distributed with
--- this work for additional information regarding copyright
--- ownership. Elasticsearch B.V. licenses this file to you under
--- the Apache License, Version 2.0 (the "License"); you may
--- not use this file except in compliance with the License.
--- You may obtain a copy of the License at
---
---    http://www.apache.org/licenses/LICENSE-2.0
---
--- Unless required by applicable law or agreed to in writing,
--- software distributed under the License is distributed on an
--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
--- KIND, either express or implied.  See the License for the
--- specific language governing permissions and limitations
--- under the License.
+-- Copyright Elasticsearch B.V. and contributors
+-- SPDX-License-Identifier: Apache-2.0
 
 local M = {}
 
@@ -36,7 +22,7 @@ M.closest_parent = function(node, selector)
       return parent_node
     end
 
-    status, parent_node = pcall(node.parent, node)
+    status, parent_node = pcall(parent_node.parent, parent_node)
     if not status or parent_node == nil then
       return
     end
@@ -47,6 +33,48 @@ end
 ---@return string?
 M.node_text = function(node)
   return vim.treesitter.get_node_text(node, vim.api.nvim_get_current_buf())
+end
+
+M.setup = function()
+  -- install grammar from github
+  local ts_path = vim.fn.stdpath("data") .. "/tree-sitter-elasticsearch-console"
+  if not vim.uv.fs_stat(ts_path) then
+    local repo = "git@github.com:elastic/tree-sitter-elasticsearch-console.git"
+    local out = vim.fn.system({ "git", "clone", "--branch=main", repo, ts_path })
+    if vim.v.shell_error ~= 0 then
+      error("Error cloning tree-sitter-elasticsearch-console:\n" .. out)
+    end
+  end
+
+  -- copy highlight queries
+  local highlights_path = vim.fn.stdpath("data") .. "/queries"
+  local out = vim.fn.system({ "mkdir", "-p", highlights_path })
+  if vim.v.shell_error ~= 0 then
+    error("Error:\n" .. out)
+  end
+  out = vim.fn.system({
+    "cp",
+    "-r",
+    ts_path .. "queries/elasticsearch_console",
+    highlights_path,
+  })
+  if vim.v.shell_error ~= 0 then
+    error("Error:\n" .. out)
+  end
+
+  -- set up parser
+  local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
+  parser_config.elasticsearch_console = {
+    install_info = {
+      url = ts_path,
+      files = { "src/parser.c" },
+      branch = "main",
+      generate_requires_npm = false,
+      requires_generate_from_grammar = false,
+    },
+    filetype = "esc",
+  }
+  vim.cmd("TSUpdate elasticsearch_console")
 end
 
 return M
