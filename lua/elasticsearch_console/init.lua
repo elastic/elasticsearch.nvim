@@ -3,6 +3,7 @@
 
 local lsp = require("elasticsearch_console.lsp")
 local user_commands = require("elasticsearch_console.user_commands")
+local treesitter = require("elasticsearch_console.treesitter")
 
 local M = {}
 
@@ -14,6 +15,9 @@ local M = {}
 ---sets up plugin
 ---@param config? config
 M.setup = function(config)
+  -- set up tree-sitter grammar
+  treesitter.setup()
+
   local filetype = "elasticsearch_console"
 
   -- add Elasticsearch console filetype
