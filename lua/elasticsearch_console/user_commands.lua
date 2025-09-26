@@ -22,19 +22,29 @@ local function _url(url)
   end
 end
 
----If auth is a valid string, overrides auth for this buffer. Otherwise prints configured auth for this buffer.
----@param auth? auth
-local function _auth(auth)
-  if auth == nil then
+---If username and password are passed, username/password auth is configured for this buffer.
+---If pass is nil, username is assumed to be an API key which is used for auth.
+---Otherwise prints configured auth for this buffer.
+---@param username? string
+---@param password? string
+local function _auth(username, password)
+  if username == nil then
     if vim.b.elasticsearch ~= nil and vim.b.elasticsearch.auth ~= nil then
-      print(vim.b.elasticsearch.auth)
+      print(table.concat(vim.b.elasticsearch.auth, ":"))
     elseif vim.g.elasticsearch.config ~= nil and vim.g.elasticsearch.auth ~= nil then
-      print(vim.g.elasticsearch.auth)
+      print(table.concat(vim.g.elasticsearch.auth, ":"))
     else
       error("No auth configured")
     end
   else
     vim.b.elasticsearch = vim.b.elasticsearch or {}
+    local auth = {}
+    if password ~= nil then
+      auth.username = username
+      auth.password = password
+    else
+      auth.api_key = username
+    end
     vim.b.elasticsearch.auth = auth
   end
 end
@@ -65,7 +75,7 @@ M.setup_buffer = function()
     elseif sub_command == "url" then
       _url(opts.fargs[2])
     elseif sub_command == "auth" then
-      _auth(opts.fargs[2])
+      _auth(opts.fargs[2], opts.fargs[3] or nil)
     else
       error("Command does not exist: " .. sub_command)
     end
