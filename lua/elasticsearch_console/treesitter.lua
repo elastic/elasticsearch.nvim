@@ -47,7 +47,7 @@ M.setup = function()
   end
 
   -- copy highlight queries
-  local highlights_path = vim.fn.stdpath("data") .. "/queries"
+  local highlights_path = vim.fn.stdpath("config") .. "/queries"
   local out = vim.fn.system({ "mkdir", "-p", highlights_path })
   if vim.v.shell_error ~= 0 then
     error("Error:\n" .. out)
@@ -55,7 +55,7 @@ M.setup = function()
   out = vim.fn.system({
     "cp",
     "-r",
-    ts_path .. "queries/elasticsearch_console",
+    ts_path .. "/queries/elasticsearch_console",
     highlights_path,
   })
   if vim.v.shell_error ~= 0 then

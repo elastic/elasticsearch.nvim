@@ -15,8 +15,9 @@ local M = {}
 ---sets up plugin
 ---@param config? config
 M.setup = function(config)
-  -- set up tree-sitter grammar
+  -- installs any missing dependencies
   treesitter.setup()
+  -- lsp.setup()
 
   local filetype = "elasticsearch_console"
 
