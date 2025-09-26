@@ -73,12 +73,6 @@ lua << EOF
 EOF
 ```
 
-Optional: install the LSP
-
-```sh
-npm install -g git+ssh://git@github.com:elastic/lsp-elasticsearch-console.git
-```
-
 #### [packer](https://github.com/wbthomason/packer.nvim)
 
 ```lua
@@ -96,20 +90,11 @@ use {
 }
 ```
 
-Optional: install the LSP
-
-```sh
-npm install -g git+ssh://git@github.com:elastic/lsp-elasticsearch-console.git
-```
-
 #### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
   {
     url = "git@github.com:elastic/elasticsearch.nvim",
-    build = {
-      "npm install -g git+ssh://git@github.com:elastic/lsp-elasticsearch-console.git",
-    },
     lazy = false,
     dependencies = {
       "nvim-treesitter/nvim-treesitter",
@@ -126,37 +111,6 @@ npm install -g git+ssh://git@github.com:elastic/lsp-elasticsearch-console.git
 
 Passing Elasticsearch configurations during setup is optional.
 If you would like to update your config at any point, you can run `:Elastic url <your url>` or `:Elastic auth <your auth>` to update config values for the current buffer.
-
-### tree-sitter grammar
-
-Until we can get the grammar polished up and published where it can be installed automatically, you will need to build the artifacts and link them to a location that is already in Neovim's runpath.
-
-1. Create directories to store parser and highlight queries:
-
-   ```sh
-   mkdir -p ~/.config/nvim/parser
-   mkdir -p ~/.config/nvim/queries/elasticsearch_console/
-   ```
-
-1. Clone the tree-sitter repo:
-
-   ```sh
-   git clone https://github.com/elastic/tree-sitter-elasticsearch-console.git
-   ```
-
-1. Build the parser:
-
-   ```sh
-   cd ./tree-sitter-elasticsearch-console
-   make
-   ```
-
-1. Link the parser and highlights queries to their respective directories:
-
-   ```sh
-   ln -s ./libtree-sitter-elasticsearch_console.so ~/.config/nvim/parser/elasticsearch_console.so
-   ln -s ./queries/highlights.scm ~/.config/nvim/queries/elasticsearch_console/highlights.scm
-   ```
 
 ### LSP server
 

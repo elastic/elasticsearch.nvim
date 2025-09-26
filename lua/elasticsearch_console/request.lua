@@ -129,7 +129,11 @@ end
 ---@param config config
 M.curl = function(config)
   local curl_cmd = request_from_position(config)
-  print(table.concat(curl_cmd, " "))
+  if curl_cmd ~= nil then
+    print(table.concat(curl_cmd, " "))
+  else
+    print("No request found under cursor")
+  end
 end
 
 return M
