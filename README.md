@@ -2,6 +2,8 @@
 
 Provides a dev console experience similar to [Kibana's dev console](https://www.elastic.co/guide/en/kibana/current/console-kibana.html) for writing and running Elasticsearch requests in Neovim.
 
+Depends on access to [the `elasticsearch_console` tree-sitter grammar](https://github.com/elastic/tree-sitter-elasticsearch-console) and, optionally, [lsp-elasticsearch-console](https://github.com/elastic/lsp-elasticsearch-console).
+
 ## Usage
 
 Create an `.esc` file and write a request:
@@ -12,20 +14,26 @@ GET _cat/indices
 
 To run the request and view the printed response, move your cursor to any position within the request and run:
 
-```lua
-:lua require("elasticsearch_console").run_request()
+```
+:Elastic run
 ```
 
-To generate a `curl` command instead, execute:
+To print a runnable `curl` command:
 
-```lua
-:lua require("elasticsearch_console").get_curl()
+```
+:Elastic curl
 ```
 
-To update your Elasticsearch config at any time, execute:
+To print the configured Elasticsearch URL for this buffer:
 
-```lua
-:lua require("elasticsearch_console").config({ url = "http://localhost:9200", auth = { api_key = "foo" } })
+```
+:Elastic url
+```
+
+To update the Elasticsearch URL for this buffer:
+
+```
+:Elastic url http://localhost:9200
 ```
 
 `url` can be any valid URL string.

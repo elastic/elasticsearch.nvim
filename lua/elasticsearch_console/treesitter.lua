@@ -36,7 +36,7 @@ M.closest_parent = function(node, selector)
       return parent_node
     end
 
-    status, parent_node = pcall(node.parent, node)
+    status, parent_node = pcall(parent_node.parent, parent_node)
     if not status or parent_node == nil then
       return
     end
