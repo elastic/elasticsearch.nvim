@@ -32,6 +32,9 @@ M.setup = function(config)
   vim.api.nvim_create_autocmd("FileType", {
     pattern = filetype,
     callback = function()
+      -- start treesitter
+      vim.treesitter.start()
+
       -- start LSP server
       lsp.setup_buffer(filetype)
 

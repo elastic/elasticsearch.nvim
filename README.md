@@ -93,8 +93,14 @@ use {
 #### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
+{
   {
-    url = "git@github.com:elastic/elasticsearch.nvim",
+    "nvim-treesitter/nvim-treesitter",
+    lazy = false,
+    build = ":TSUpdate",
+  },
+  {
+    url = "git@github.com:elastic/elasticsearch.nvim.git",
     lazy = false,
     dependencies = {
       "nvim-treesitter/nvim-treesitter",
@@ -107,7 +113,10 @@ use {
       },
     },
   },
+}
 ```
+
+You may need to restart Neovim and run `:TSUpdate` after installing the plugin to ensure the required tree-sitter grammar is installed.
 
 Passing Elasticsearch configurations during setup is optional.
 If you would like to update your config at any point, you can run `:Elastic url <your url>` or `:Elastic auth <your auth>` to update config values for the current buffer.

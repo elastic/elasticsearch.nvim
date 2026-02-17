@@ -36,45 +36,45 @@ M.node_text = function(node)
 end
 
 M.setup = function()
-  -- install grammar from github
-  local ts_path = vim.fn.stdpath("data") .. "/tree-sitter-elasticsearch-console"
-  if not vim.uv.fs_stat(ts_path) then
-    local repo = "git@github.com:elastic/tree-sitter-elasticsearch-console.git"
-    local out = vim.fn.system({ "git", "clone", "--branch=main", repo, ts_path })
+  local install_dir = vim.fn.stdpath("data") .. "/site"
+  local ts_repo = vim.fn.stdpath("data") .. "/tree-sitter-elasticsearch-console"
+
+  local parser_dir = install_dir .. "/parser"
+  vim.fn.mkdir(parser_dir, "p")
+  local queries_dir = install_dir .. "/queries/elasticsearch_console"
+  vim.fn.mkdir(queries_dir, "p")
+
+  -- copy parser
+  local parser_lib = parser_dir .. "/elasticsearch_console.so"
+  local src_lib = ts_repo .. "/elasticsearch-console.so"
+  local copy_out = vim.fn.system({ "cp", src_lib, parser_lib })
+  if vim.v.shell_error ~= 0 then
+    error("Error copying parser binary: " .. copy_out)
+  end
+
+  -- copy queries
+  local src_queries = ts_repo .. "/queries/elasticsearch_console"
+  if vim.uv.fs_stat(src_queries) then
+    local copy_queries = vim.fn.system({ "cp", "-r", src_queries .. "/.", queries_dir })
     if vim.v.shell_error ~= 0 then
-      error("Error cloning tree-sitter-elasticsearch-console:\n" .. out)
+      vim.notify("Warning: Could not copy queries: " .. copy_queries, vim.log.levels.WARN)
     end
   end
 
-  -- copy highlight queries
-  local highlights_path = vim.fn.stdpath("config") .. "/queries"
-  local out = vim.fn.system({ "mkdir", "-p", highlights_path })
-  if vim.v.shell_error ~= 0 then
-    error("Error:\n" .. out)
-  end
-  out = vim.fn.system({
-    "cp",
-    "-r",
-    ts_path .. "/queries/elasticsearch_console",
-    highlights_path,
-  })
-  if vim.v.shell_error ~= 0 then
-    error("Error:\n" .. out)
-  end
+  -- register the language with neovim
+  vim.treesitter.language.register("elasticsearch_console", { "esc" })
 
-  -- set up parser
-  local parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-  parser_config.elasticsearch_console = {
-    install_info = {
-      url = ts_path,
-      files = { "src/parser.c" },
-      branch = "main",
-      generate_requires_npm = false,
-      requires_generate_from_grammar = false,
-    },
-    filetype = "esc",
-  }
-  vim.cmd("TSUpdate elasticsearch_console")
+  -- register parser with nvim-treesitter
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "TSUpdate",
+    callback = function()
+      require("nvim-treesitter.parsers").elasticsearch_console = {
+        install_info = {
+          path = ts_repo,
+        },
+      }
+    end,
+  })
 end
 
 return M

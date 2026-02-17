@@ -10,8 +10,7 @@ M.setup_buffer = function(filetype)
   vim.lsp.start({
     name = filetype,
     cmd = {
-      "node",
-      lsp_path .. "/out/server.js",
+      "lsp-elasticsearch-console",
       "--stdio",
     },
   })
