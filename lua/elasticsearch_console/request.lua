@@ -9,6 +9,17 @@ local M = {}
 
 local response_buf_nr = nil
 
+-- check if jq is installed
+local has_jq = false
+local jq_on_exit = function(obj)
+  if obj.code ~= 0 then
+    has_jq = false
+  else
+    has_jq = true
+  end
+end
+vim.system({ "which", "jq" }, { text = true }, jq_on_exit)
+
 ---builds a curl command string for a given method, path and body
 ---@param config config
 ---@param request request
@@ -26,7 +37,7 @@ local function build_curl_request(config, request)
     if config.auth.api_key ~= nil then
       -- do API auth
       table.insert(cmd, "-H")
-      table.insert(cmd, '"Authorization: ' .. config.auth.api_key .. '"')
+      table.insert(cmd, "'Authorization: " .. config.auth.api_key .. "'")
     elseif config.auth.username ~= nil and config.auth.password ~= nil then
       -- do user/pass auth
       table.insert(cmd, "-u")
@@ -37,6 +48,14 @@ local function build_curl_request(config, request)
   -- timeout
   table.insert(cmd, "--connect-timeout")
   table.insert(cmd, "5")
+
+  -- content-type header
+  table.insert(cmd, "-H")
+  if request.path:find("_bulk") then
+    table.insert(cmd, "'Content-Type: application/x-ndjson'")
+  else
+    table.insert(cmd, "'Content-Type: application/json'")
+  end
 
   -- HTTP method
   table.insert(cmd, "-X")
@@ -49,8 +68,8 @@ local function build_curl_request(config, request)
   table.insert(cmd, config.url .. request.path)
 
   if request.body ~= nil then
-    -- TODO: escape quotes in strings, support triple quotes
-    table.insert(cmd, "-d'" .. request.body .. "'")
+    table.insert(cmd, "-d")
+    table.insert(cmd, "'" .. request.body .. "'")
   end
   return cmd
 end
@@ -104,7 +123,7 @@ local function request_from_position(config)
 end
 
 ---display a request's response in a read-only JSON buffer
-local function display_response(response)
+local function display_response(response, filetype)
   vim.schedule(function()
     -- reuse existing buffer if it exists and is valid
     if response_buf_nr == nil or not vim.api.nvim_buf_is_valid(response_buf_nr) then
@@ -115,8 +134,10 @@ local function display_response(response)
       vim.opt_local.bufhidden = "wipe"
 
       vim.api.nvim_buf_set_name(response_buf_nr, "[Elasticsearch response]")
-      vim.api.nvim_buf_set_option(response_buf_nr, "filetype", "json")
     end
+
+    -- set the filetype (update it each time content is replaced)
+    vim.api.nvim_buf_set_option(response_buf_nr, "filetype", filetype)
 
     -- temporarily disable readonly to allow writing
     vim.api.nvim_buf_set_option(response_buf_nr, "readonly", false)
@@ -148,7 +169,12 @@ M.run = function(config)
       end
     end
 
-    display_response(obj.stdout)
+    display_response(obj.stdout, "json")
+  end
+
+  if has_jq then
+    curl_cmd = table.concat(request_cmd, " ")
+    request_cmd = { "bash", "-c", curl_cmd .. " | jq" }
   end
 
   vim.system(request_cmd, { text = true }, on_exit)
@@ -159,7 +185,7 @@ end
 M.curl = function(config)
   local curl_cmd = request_from_position(config)
   if curl_cmd ~= nil then
-    display_response(table.concat(curl_cmd, " "))
+    display_response(table.concat(curl_cmd, " "), "bash")
   else
     print("No request found under cursor")
   end
