@@ -7,6 +7,8 @@ local M = {}
 
 ---@alias request { method: string, path: string, body?: string }
 
+local response_buf_nr = nil
+
 ---builds a curl command string for a given method, path and body
 ---@param config config
 ---@param request request
@@ -101,6 +103,33 @@ local function request_from_position(config)
   return build_curl_request(config, request)
 end
 
+---display a request's response in a read-only JSON buffer
+local function display_response(response)
+  vim.schedule(function()
+    -- reuse existing buffer if it exists and is valid
+    if response_buf_nr == nil or not vim.api.nvim_buf_is_valid(response_buf_nr) then
+      response_buf_nr = vim.api.nvim_create_buf(true, false)
+      vim.api.nvim_command("botright split")
+      vim.api.nvim_command("buffer " .. response_buf_nr)
+      vim.opt_local.buftype = "nofile"
+      vim.opt_local.bufhidden = "wipe"
+
+      vim.api.nvim_buf_set_name(response_buf_nr, "[Elasticsearch response]")
+      vim.api.nvim_buf_set_option(response_buf_nr, "filetype", "json")
+    end
+
+    -- temporarily disable readonly to allow writing
+    vim.api.nvim_buf_set_option(response_buf_nr, "readonly", false)
+
+    -- add content to the buffer
+    local lines = vim.split(response, "\n")
+    vim.api.nvim_buf_set_lines(response_buf_nr, 0, -1, true, lines)
+
+    -- re-enable readonly
+    vim.api.nvim_buf_set_option(response_buf_nr, "readonly", true)
+  end)
+end
+
 ---runs Elasticsearch request under the current cursor location
 ---@param config config
 M.run = function(config)
@@ -119,7 +148,7 @@ M.run = function(config)
       end
     end
 
-    print(obj.stdout)
+    display_response(obj.stdout)
   end
 
   vim.system(request_cmd, { text = true }, on_exit)
@@ -130,7 +159,7 @@ end
 M.curl = function(config)
   local curl_cmd = request_from_position(config)
   if curl_cmd ~= nil then
-    print(table.concat(curl_cmd, " "))
+    display_response(table.concat(curl_cmd, " "))
   else
     print("No request found under cursor")
   end
