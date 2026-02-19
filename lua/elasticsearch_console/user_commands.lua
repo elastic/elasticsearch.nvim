@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: Apache-2.0
 
 local request = require("elasticsearch_console.request")
+local config = require("elasticsearch_console.config")
 
 local M = {}
 
@@ -69,9 +70,9 @@ M.setup_buffer = function()
   vim.api.nvim_buf_create_user_command(0, "Elastic", function(opts)
     local sub_command = opts.fargs[1]
     if sub_command == "run" then
-      request.run(merged_config())
+      request.run(config.buffer_config())
     elseif sub_command == "curl" then
-      request.curl(merged_config())
+      request.curl(config.buffer_config())
     elseif sub_command == "url" then
       _url(opts.fargs[2])
     elseif sub_command == "auth" then

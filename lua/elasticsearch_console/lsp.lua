@@ -1,5 +1,6 @@
 -- Copyright Elasticsearch B.V. and contributors
 -- SPDX-License-Identifier: Apache-2.0
+local config = require("elasticsearch_console.config")
 
 local M = {}
 
@@ -13,6 +14,7 @@ M.setup_buffer = function(filetype)
       "lsp-elasticsearch-console",
       "--stdio",
     },
+    init_options = config.buffer_config(),
   })
 end
 
