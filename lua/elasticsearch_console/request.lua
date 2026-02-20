@@ -61,6 +61,10 @@ local function build_curl_request(config, request)
   table.insert(cmd, "-X")
   table.insert(cmd, request.method)
 
+  -- output headers to stdout so we can check content-type
+  table.insert(cmd, "-D")
+  table.insert(cmd, "-")
+
   -- URL
   if string.sub(request.path, 1, 1) ~= "/" then
     request.path = "/" .. request.path
@@ -151,6 +155,35 @@ local function display_response(response, filetype)
   end)
 end
 
+---parse curl response with headers and extract the content-type
+---@param response string
+---@return string? content_type the content-type header value
+---@return string body the response body (without headers)
+local function parse_response(response)
+  local lines = vim.split(response, "\n")
+  local content_type = nil
+  local body_start = 1
+
+  -- parse headers until we hit an empty line
+  for i, line in ipairs(lines) do
+    if line == "" then
+      -- empty line marks end of headers
+      body_start = i + 1
+      break
+    end
+    -- check for content-type header (case-insensitive)
+    local ct = line:match("^[Cc]ontent%-[Tt]ype:%s*(.+)$")
+    if ct then
+      content_type = ct:gsub(";.*", ""):match("^%s*(.-)%s*$") -- remove charset etc and trim
+    end
+  end
+
+  -- reconstruct body (everything after headers)
+  local body = table.concat(vim.list_slice(lines, body_start), "\n")
+
+  return content_type, body
+end
+
 ---runs Elasticsearch request under the current cursor location
 ---@param config config
 M.run = function(config)
@@ -169,12 +202,26 @@ M.run = function(config)
       end
     end
 
-    display_response(obj.stdout, "json")
-  end
+    local content_type, body = parse_response(obj.stdout)
 
-  if has_jq then
-    curl_cmd = table.concat(request_cmd, " ")
-    request_cmd = { "bash", "-c", curl_cmd .. " | jq" }
+    -- only apply jq to JSON and ndjson responses
+    local should_format = has_jq and content_type and
+      (content_type == "application/json" or content_type == "application/x-ndjson")
+
+    if should_format then
+      -- apply jq formatting to the body
+      local jq_on_exit = function(jq_obj)
+        if jq_obj.code == 0 then
+          display_response(jq_obj.stdout, "json")
+        else
+          -- fall back to unformatted body if jq fails
+          display_response(body, "json")
+        end
+      end
+      vim.system({ "jq" }, { stdin = body, text = true }, jq_on_exit)
+    else
+      display_response(body, "json")
+    end
   end
 
   vim.system(request_cmd, { text = true }, on_exit)
