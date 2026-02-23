@@ -37,7 +37,7 @@ local function build_curl_request(config, request)
     if config.auth.api_key ~= nil then
       -- do API auth
       table.insert(cmd, "-H")
-      table.insert(cmd, "'Authorization: " .. config.auth.api_key .. "'")
+      table.insert(cmd, "Authorization: " .. config.auth.api_key)
     elseif config.auth.username ~= nil and config.auth.password ~= nil then
       -- do user/pass auth
       table.insert(cmd, "-u")
@@ -52,9 +52,9 @@ local function build_curl_request(config, request)
   -- content-type header
   table.insert(cmd, "-H")
   if request.path:find("_bulk") then
-    table.insert(cmd, "'Content-Type: application/x-ndjson'")
+    table.insert(cmd, "Content-Type: application/x-ndjson")
   else
-    table.insert(cmd, "'Content-Type: application/json'")
+    table.insert(cmd, "Content-Type: application/json")
   end
 
   -- HTTP method
@@ -73,7 +73,7 @@ local function build_curl_request(config, request)
 
   if request.body ~= nil then
     table.insert(cmd, "-d")
-    table.insert(cmd, "'" .. request.body .. "'")
+    table.insert(cmd, request.body)
   end
   return cmd
 end
@@ -227,12 +227,28 @@ M.run = function(config)
   vim.system(request_cmd, { text = true }, on_exit)
 end
 
+---shell-escape and join a command table for display
+---wraps any arguments containing spaces in single quotes
+---@param cmd string[]
+---@return string
+local function format_curl_for_display(cmd)
+  local result = {}
+  for _, arg in ipairs(cmd) do
+    if arg:find(" ") then
+      table.insert(result, "'" .. arg .. "'")
+    else
+      table.insert(result, arg)
+    end
+  end
+  return table.concat(result, " ")
+end
+
 ---Returns a list of one or more strings, each being a runnable cURL command
 ---@param config config
 M.curl = function(config)
   local curl_cmd = request_from_position(config)
   if curl_cmd ~= nil then
-    display_response(table.concat(curl_cmd, " "), "bash")
+    display_response(format_curl_for_display(curl_cmd), "bash")
   else
     print("No request found under cursor")
   end
